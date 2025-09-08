@@ -3,4 +3,4 @@ youtube-transcript-api
 transformers
 torch
 reportlab
-faster-whisper
+sentencepiece
