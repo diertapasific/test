@@ -7,7 +7,17 @@ from reportlab.pdfgen import canvas
 import io
 import re
 import os
+import requests
+import random
 
+# Fetch list of HTTP proxies from ProxyScrape
+url = "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=1000&country=all&ssl=all&anonymity=all"
+response = requests.get(url)
+proxy_list = response.text.splitlines()
+
+# Choose a random proxy
+proxy = random.choice(proxy_list)
+print("Using proxy:", proxy)
 st.set_page_config(page_title="SumTube - YouTube Summarizer", page_icon="🎬", layout="centered")
 st.title("🎬 SumTube: YouTube Video Summarizer")
 st.write("Paste a YouTube link, download audio, fetch transcript, and generate AI-powered summary!")
@@ -32,7 +42,7 @@ if url:
             'outtmpl': video_id,
             'quiet': True,
             'no_warnings': True,
-            'proxy': 'http://156.228.112.99:3129',
+            'proxy': f"http://{proxy}",
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
