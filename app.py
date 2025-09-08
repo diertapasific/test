@@ -1,26 +1,14 @@
 import streamlit as st
-import yt_dlp
-from faster_whisper import WhisperModel
+from youtube_transcript_api import YouTubeTranscriptApi
 from transformers import pipeline
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import io
 import re
-import os
-import requests
-import random
 
-# Fetch list of HTTP proxies from ProxyScrape
-url = "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=1000&country=all&ssl=all&anonymity=all"
-response = requests.get(url)
-proxy_list = response.text.splitlines()
-
-# Choose a random proxy
-proxy = random.choice(proxy_list)
-print("Using proxy:", proxy)
 st.set_page_config(page_title="SumTube - YouTube Summarizer", page_icon="🎬", layout="centered")
 st.title("🎬 SumTube: YouTube Video Summarizer")
-st.write("Paste a YouTube link, download audio, fetch transcript, and generate AI-powered summary!")
+st.write("Paste a YouTube link, fetch transcript, and generate AI-powered summary!")
 
 # --- Input ---
 url = st.text_input("📌 Paste a YouTube URL:")
@@ -34,33 +22,13 @@ if url:
         st.stop()
 
     try:
-        # --- Step 1: Download audio ---
-        st.info("⏳ Downloading audio...")
-        audio_file = f"{video_id}.mp3"
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': video_id,
-            'quiet': True,
-            'no_warnings': True,
-            'proxy': f"http://{proxy}",
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        st.success(f"✅ Audio downloaded: {audio_file}")
+        # --- Step 1: Fetch transcript ---
+        st.info("⏳ Fetching transcript...")
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+        full_text = " ".join([t['text'] for t in transcript_list])
+        st.success("✅ Transcript fetched!")
 
-        # --- Step 2: Transcribe audio ---
-        st.info("⏳ Transcribing audio...")
-        model = WhisperModel("base")  # can switch to "small" or "tiny" for faster processing
-        segments, info = model.transcribe(audio_file)
-        full_text = " ".join([segment.text for segment in segments])
-        st.success("✅ Transcription completed!")
-
-        # --- Step 3: Summarize ---
+        # --- Step 2: Summarize ---
         st.info("⏳ Summarizing text...")
         summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
@@ -86,8 +54,8 @@ if url:
 
         final_summary = " ".join(summaries)
 
-        # --- Step 4: Tabs ---
-        tab_summary, tab_audio, tab_transcript = st.tabs(["📝 Summary", "🎵 Audio", "📜 Transcript"])
+        # --- Step 3: Tabs ---
+        tab_summary, tab_transcript = st.tabs(["📝 Summary", "📜 Transcript"])
 
         with tab_summary:
             st.subheader("📌 Final Summary")
@@ -141,11 +109,6 @@ if url:
                 file_name=f"{video_id}_summary.pdf",
                 mime="application/pdf"
             )
-
-        with tab_audio:
-            st.subheader("🎵 Downloaded Audio")
-            audio_bytes = open(audio_file, "rb").read()
-            st.audio(audio_bytes, format="audio/mp3")
 
         with tab_transcript:
             st.subheader("📜 Full Transcript")
