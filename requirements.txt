@@ -1,0 +1,6 @@
+streamlit
+yt-dlp
+faster-whisper
+transformers
+torch
+reportlab
