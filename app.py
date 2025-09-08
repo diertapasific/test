@@ -106,12 +106,8 @@ if url:
 
         pdf_buffer = create_pdf(final_summary, summaries)
 
-        # --- Tabs ---
-        tab_transcript, tab_summary = st.tabs(["📜 Transcript", "📝 Summary"])
-
-        with tab_transcript:
-            st.subheader("📜 Full Transcript")
-            st.write(full_text)
+        # --- Tabs (Summary first, Transcript second) ---
+        tab_summary, tab_transcript = st.tabs(["📝 Summary", "📜 Transcript"])
 
         with tab_summary:
             st.subheader("📌 Final Summary")
@@ -128,6 +124,10 @@ if url:
                 file_name=f"{video_id}_summary.pdf",
                 mime="application/pdf"
             )
+
+        with tab_transcript:
+            st.subheader("📜 Full Transcript")
+            st.write(full_text)
 
     except Exception as e:
         st.error(f"❌ Could not fetch transcript: {str(e)}")
