@@ -1,15 +1,18 @@
-
 import streamlit as st
 from youtube_transcript_api import YouTubeTranscriptApi
 from transformers import pipeline
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import io
 import re
 
-st.set_page_config(page_title="AskTube - YouTube Summarizer", page_icon="🎬", layout="wide")
+# --- Page config ---
+st.set_page_config(page_title="AskTube - YouTube Summarizer", page_icon="🎬", layout="centered")
 
 st.title("🎬 AskTube: YouTube Video Summarizer")
 st.write("Paste a YouTube link, and I'll fetch the transcript + generate a summary for you!")
 
-# Input YouTube URL
+# --- Input YouTube URL ---
 url = st.text_input("📌 Paste a YouTube URL:")
 
 if url:
@@ -22,13 +25,13 @@ if url:
         st.stop()
 
     try:
+        # --- Fetch transcript ---
         with st.spinner("⏳ Fetching transcript..."):
             transcript = YouTubeTranscriptApi().fetch(video_id=video_id, languages=['en'])
             full_text = " ".join([snippet.text for snippet in transcript])
-
         st.success("✅ Transcript fetched!")
 
-        # Summarizer
+        # --- Summarizer ---
         summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 
         # Chunking
@@ -53,20 +56,66 @@ if url:
 
         final_summary = " ".join(summaries)
 
-        # --- Tabs for better UI ---
-        tab1, tab2 = st.tabs(["📜 Transcript", "📝 Summary"])
+        # --- Function to create PDF ---
+        def create_pdf(summary_text, bullet_points):
+            buffer = io.BytesIO()
+            c = canvas.Canvas(buffer, pagesize=letter)
+            width, height = letter
 
-        with tab1:
-            st.subheader("📜 Full Transcript")
-            st.write(full_text)
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(50, height - 50, "YouTube Video Summary")
 
-        with tab2:
+            c.setFont("Helvetica", 12)
+            y = height - 100
+            c.drawString(50, y, "Final Summary:")
+            y -= 20
+
+            text_obj = c.beginText(50, y)
+            text_obj.setFont("Helvetica", 11)
+            for line in summary_text.split(". "):
+                text_obj.textLine(line.strip())
+            c.drawText(text_obj)
+
+            y = text_obj.getY() - 40
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, y, "Bullet Points:")
+            y -= 20
+
+            text_obj = c.beginText(50, y)
+            text_obj.setFont("Helvetica", 11)
+            for i, point in enumerate(bullet_points, 1):
+                for line in point.split(". "):
+                    text_obj.textLine(f"{i}. {line.strip()}")
+            c.drawText(text_obj)
+
+            c.showPage()
+            c.save()
+            buffer.seek(0)
+            return buffer
+
+        pdf_buffer = create_pdf(final_summary, summaries)
+
+        # --- Tabs ---
+        tab_summary, tab_transcript = st.tabs(["📝 Summary", "📜 Transcript"])
+
+        with tab_summary:
             st.subheader("📌 Final Summary")
             st.write(final_summary)
 
             st.markdown("### 🔹 Summary in Bullet Points")
             for i, s in enumerate(summaries, 1):
                 st.markdown(f"- **Part {i}:** {s}")
+
+            st.download_button(
+                label="⬇️ Download Summary as PDF",
+                data=pdf_buffer,
+                file_name=f"{video_id}_summary.pdf",
+                mime="application/pdf"
+            )
+
+        with tab_transcript:
+            st.subheader("📜 Full Transcript")
+            st.write(full_text)
 
     except Exception as e:
         st.error(f"❌ Could not fetch transcript: {str(e)}")
