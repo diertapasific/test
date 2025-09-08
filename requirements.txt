@@ -3,4 +3,3 @@ youtube-transcript-api
 transformers
 torch
 reportlab
-sentencepiece
