@@ -7,9 +7,9 @@ from reportlab.lib.utils import simpleSplit
 import io
 import re
 
-st.set_page_config(page_title="AskTube - YouTube Summarizer", page_icon="🎬", layout="centered")
+st.set_page_config(page_title="SumTube - YouTube Summarizer", page_icon="🎬", layout="centered")
 
-st.title("🎬 AskTube: YouTube Video Summarizer")
+st.title("🎬 SumTube: YouTube Video Summarizer")
 st.write("Paste a YouTube link, and I'll fetch the transcript + generate a summary for you!")
 
 # Input YouTube URL
